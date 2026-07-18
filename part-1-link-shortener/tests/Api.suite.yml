@@ -1,0 +1,20 @@
+# API suite: real HTTP semantics (status codes, headers, JSON bodies) against
+# the Symfony kernel booted in the `test` env -> app_test database.
+#
+# The Doctrine module (cleanup: true) wraps every test in a transaction that
+# is rolled back afterwards, so tests are isolated and dev data is untouched.
+actor: ApiTester
+modules:
+    enabled:
+        - Symfony:
+            app_path: 'src'
+            environment: 'test'
+        - Doctrine:
+            depends: Symfony
+            cleanup: true
+        - REST:
+            depends: Symfony
+            part: Json
+        - Asserts
+step_decorators:
+    - Codeception\Step\AsJson

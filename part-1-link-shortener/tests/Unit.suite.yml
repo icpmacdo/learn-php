@@ -1,0 +1,7 @@
+# Unit suite: pure logic only, no kernel, no database.
+# (Controllers, repository SQL and validator constraints are deliberately NOT
+# unit-tested -- the API suite covers them. That split is the test pyramid.)
+actor: UnitTester
+modules:
+    enabled:
+        - Asserts

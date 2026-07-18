@@ -1,0 +1,65 @@
+# Part 1 -- link-shortener API. Three services, nothing installed on the host.
+#
+#   docker compose up -d        -> working API on http://localhost:8080
+#   docker compose exec php ... -> composer / console / codecept commands
+name: link-shortener
+
+services:
+  php:
+    build:
+      context: docker/php
+    volumes:
+      # Bind-mount the whole app for the dev loop: edit on the host,
+      # php-fpm picks the change up on the next request.
+      - ./:/app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "app-healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      # Generous: the entrypoint waits for MySQL and runs migrations first.
+      start_period: 60s
+
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # nginx only needs the public/ dir (and only to check file existence);
+      # every PHP request is proxied to php:9000.
+      - ./public:/app/public:ro
+    depends_on:
+      php:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/links || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  mysql:
+    image: mysql:8
+    # Deliberately NOT published to the host -- only containers can reach it.
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # -h 127.0.0.1 forces TCP, so this stays "unhealthy" during the
+      # init phase (the temp init server is socket-only).
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uapp -papp --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  mysql-data:

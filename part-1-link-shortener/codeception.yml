@@ -1,0 +1,17 @@
+namespace: App\Tests
+support_namespace: Support
+paths:
+    tests: tests
+    output: tests/_output
+    data: tests/Support/Data
+    support: tests/Support
+    envs: tests/_envs
+actor_suffix: Tester
+settings:
+    # Resolved per suite dir (tests/Api/_bootstrap.php, tests/Unit/_bootstrap.php);
+    # both just require tests/_bootstrap.php, which loads vendor/autoload.php and
+    # the .env files (Codeception boots the kernel itself, bypassing Symfony's runtime).
+    bootstrap: _bootstrap.php
+extensions:
+    enabled:
+        - Codeception\Extension\RunFailed
