@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard — Task tracker{% endblock %}
+
+{% block body %}
+    <h1>Your teams</h1>
+    <p>
+        Signed in as {{ app.user.displayName }} ({{ app.user.email }})
+        <form class="inline" method="post" action="/logout">
+            <button type="submit">Log out</button>
+        </form>
+    </p>
+
+    {% if rows is empty %}
+        <p>You are not a member of any team yet. Create one via the API.</p>
+    {% else %}
+        <table>
+            <thead>
+                <tr><th>Team</th><th>Role</th><th>Tasks</th><th>To do</th><th>In progress</th><th>Done</th></tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        {# team.name is user-authored content: autoescaping renders it inert. #}
+                        <td><a href="{{ path('app_dashboard_team', {id: row.membership.team.id}) }}">{{ row.membership.team.name }}</a></td>
+                        <td>{{ row.membership.role.value }}</td>
+                        {# Counts come from the cached team_summary.{id} (TTL 300s,
+                           invalidated on every task write via the team_tasks tag). #}
+                        <td>{{ row.summary.total }}</td>
+                        <td>{{ row.summary.todo }}</td>
+                        <td>{{ row.summary.in_progress }}</td>
+                        <td>{{ row.summary.done }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endblock %}

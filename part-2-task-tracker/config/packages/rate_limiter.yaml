@@ -1,0 +1,35 @@
+# Two named limiters, both SLIDING window (a fixed window allows 2x the limit
+# in a burst straddling a window boundary; sliding weighs the previous window
+# proportionally, so the rate stays smooth). Counters live in Redis
+# (cache.rate_limiter pool, config/packages/cache.yaml) so limits hold across
+# php-fpm workers/restarts. Enforced by App\EventListener\RateLimitListener.
+#
+# Limits are parameters, not magic numbers, and the test environment overrides
+# them to effectively-unlimited: functional suites must never flake on shared
+# limiter state. The 429 path itself is covered in the Unit suite (in-memory
+# storage, limit 2) and by scripts/rate-limit-demo.sh against the dev stack.
+parameters:
+    # auth: per-IP, POST /api/register + POST /api/tokens + POST /login.
+    # Models credential stuffing: *failed* logins count -- the limiter runs
+    # before authentication, every attempt consumes.
+    app.rate_limit.auth_limit: 5
+    # api_write: per-user, every other POST/PATCH/DELETE under /api.
+    app.rate_limit.api_write_limit: 30
+
+when@test:
+    parameters:
+        app.rate_limit.auth_limit: 10000
+        app.rate_limit.api_write_limit: 10000
+
+framework:
+    rate_limiter:
+        auth:
+            policy: sliding_window
+            limit: '%app.rate_limit.auth_limit%'
+            interval: '1 minute'
+            cache_pool: cache.rate_limiter
+        api_write:
+            policy: sliding_window
+            limit: '%app.rate_limit.api_write_limit%'
+            interval: '1 minute'
+            cache_pool: cache.rate_limiter

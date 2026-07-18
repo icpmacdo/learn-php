@@ -1,0 +1,38 @@
+framework:
+    cache:
+        # Stable namespace prefix for every pool. The environment is part of it
+        # so dev and test never read each other's entries (they share one
+        # Redis, unlike MySQL where app/app_test are separate databases).
+        prefix_seed: 'task-tracker.%kernel.environment%'
+
+        # All Redis-backed pools point at the same single Redis container.
+        default_redis_provider: '%env(REDIS_URL)%'
+
+        # Redis wears two hats in this project -- deliberately configured as
+        # two SEPARATE pools so the patterns stay distinct (the study point):
+        #
+        #   1. tasks.cache (cache.adapter.redis_tag_aware)
+        #      A *cache*: derived data that can be rebuilt from MySQL at any
+        #      time. Tag-aware because invalidation happens by tag -- one
+        #      invalidateTags(["team_tasks.{id}"]) wipes every page/filter/sort
+        #      variant of a team's task list at once; per-key deletion could
+        #      never enumerate the query-shape variants. Keys/tags/TTLs live in
+        #      App\Cache\TaskCacheKeys + parameters below.
+        #
+        #   2. cache.rate_limiter (plain cache.adapter.redis)
+        #      *Counter storage* for symfony/rate-limiter (the name is the
+        #      component's conventional default pool). Not a cache in the
+        #      "rebuildable" sense -- losing it resets everyone's rate-limit
+        #      windows -- and never invalidated by the app; entries simply
+        #      expire. No tags needed, so no tag-aware overhead.
+        pools:
+            tasks.cache:
+                adapter: cache.adapter.redis_tag_aware
+            cache.rate_limiter:
+                adapter: cache.adapter.redis
+
+parameters:
+    # Cache TTLs (seconds). TTL is the *backstop*; explicit tag invalidation
+    # on every task/team write path is the actual freshness strategy.
+    app.cache.task_list_ttl: 60
+    app.cache.team_summary_ttl: 300

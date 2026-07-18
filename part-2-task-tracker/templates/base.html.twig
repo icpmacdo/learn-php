@@ -1,0 +1,25 @@
+{# Base layout. Twig autoescaping is ON (the default) everywhere -- no |raw
+   filter exists anywhere in this project; that is the XSS stance. #}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% block title %}Task tracker{% endblock %}</title>
+        <style>
+            body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 40rem; padding: 0 1rem; color: #1a1a1a; }
+            .error { color: #b00020; }
+            form.inline { display: inline; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { text-align: left; padding: 0.3rem 0.6rem; border-bottom: 1px solid #ddd; }
+            article.task { border: 1px solid #ddd; border-radius: 0.4rem; padding: 0 1rem; margin: 1rem 0; }
+            article.task h2 { font-size: 1.1rem; }
+            .meta { color: #666; font-size: 0.85rem; }
+            ul.comments { padding-left: 1.2rem; }
+            ul.comments li { margin: 0.4rem 0; }
+        </style>
+    </head>
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>

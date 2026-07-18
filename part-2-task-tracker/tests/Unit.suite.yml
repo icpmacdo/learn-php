@@ -1,0 +1,8 @@
+# Unit suite: pure logic only, no kernel, no database.
+# The voters are the star here: authorization decisions across every
+# role x relationship combination run as plain PHP with in-memory entities --
+# the pyramid slot CodeGenerator filled in part 1.
+actor: UnitTester
+modules:
+    enabled:
+        - Asserts

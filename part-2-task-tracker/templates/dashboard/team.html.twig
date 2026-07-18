@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ team.name }} — Task tracker{% endblock %}
+
+{% block body %}
+    <p><a href="{{ path('app_dashboard') }}">&larr; Your teams</a></p>
+
+    {# Everything below the headings is USER-AUTHORED content rendered into
+       HTML: team name, task titles, descriptions, comment bodies. Twig
+       autoescaping (on by default; no |raw in this project) turns a stored
+       "<script>alert('xss')</script>" title into inert
+       "&lt;script&gt;..." text -- the Api suite proves exactly that. #}
+    <h1>{{ team.name }}</h1>
+
+    <p>
+        {{ summary.total }} task{{ summary.total == 1 ? '' : 's' }} —
+        {{ summary.todo }} to do,
+        {{ summary.in_progress }} in progress,
+        {{ summary.done }} done
+    </p>
+
+    {% if tasks is empty %}
+        <p>No tasks yet. Create some via the API.</p>
+    {% endif %}
+
+    {% for task in tasks %}
+        <article class="task">
+            <h2>{{ task.title }}</h2>
+            <p class="meta">
+                {{ task.status.value }} · {{ task.priority.value }} priority
+                · created by {{ task.createdBy.displayName }}
+                {% if task.assignee %} · assigned to {{ task.assignee.displayName }}{% endif %}
+                {% if task.dueDate %} · due {{ task.dueDate|date('Y-m-d') }}{% endif %}
+            </p>
+            {% if task.description %}
+                <p>{{ task.description }}</p>
+            {% endif %}
+
+            {% set taskComments = commentsByTask[task.id] ?? [] %}
+            {% if taskComments is not empty %}
+                <ul class="comments">
+                    {% for comment in taskComments %}
+                        <li>
+                            <strong>{{ comment.author.displayName }}</strong>
+                            <span class="meta">{{ comment.createdAt|date('Y-m-d H:i') }} UTC</span><br>
+                            {{ comment.body }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </article>
+    {% endfor %}
+{% endblock %}

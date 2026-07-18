@@ -1,0 +1,66 @@
+security:
+    # 'auto' picks the strongest available algorithm (argon2id where sodium
+    # exists, bcrypt otherwise) -- never hand-configure a raw algorithm.
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+
+    providers:
+        app_users:
+            entity:
+                class: App\Entity\User
+                property: email
+
+    # Two firewalls = two auth worlds:
+    #   api -> stateless Bearer tokens (custom ApiTokenHandler, SHA-256 lookup)
+    #   web -> classic form login with a session cookie
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        api:
+            pattern: ^/api
+            stateless: true
+            provider: app_users
+            # Unauthenticated request to a protected /api route -> JSON 401
+            # (the API's version of the web firewall's 302-to-/login).
+            entry_point: App\Security\ApiAuthenticationEntryPoint
+            access_token:
+                token_handler: App\Security\ApiTokenHandler
+                failure_handler: App\Security\ApiAuthenticationFailureHandler
+
+        web:
+            lazy: true
+            provider: app_users
+            form_login:
+                login_path: app_login
+                check_path: app_login
+                default_target_path: app_dashboard
+                enable_csrf: true
+            logout:
+                # No controller: the firewall's logout listener intercepts
+                # requests to this path, clears the session, redirects.
+                path: /logout
+                target: app_login
+
+    # Only the *first* matching rule applies.
+    access_control:
+        # Public API exceptions: registration and the credential->token exchange.
+        - { path: ^/api/register$, methods: [POST], roles: PUBLIC_ACCESS }
+        - { path: ^/api/tokens$, methods: [POST], roles: PUBLIC_ACCESS }
+        # Everything else under /api needs a valid Bearer token.
+        - { path: ^/api, roles: ROLE_USER }
+        - { path: ^/login$, roles: PUBLIC_ACCESS }
+        # Browser pages need a session; anonymous users get redirected to /login.
+        - { path: ^/dashboard, roles: ROLE_USER }
+
+when@test:
+    security:
+        password_hashers:
+            # Hashers are resource-intensive by design; in tests the lowest
+            # cost keeps the suite fast without changing behavior.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4 # Lowest possible value for bcrypt
+                time_cost: 3 # Lowest possible value for argon
+                memory_cost: 10 # Lowest possible value for argon
