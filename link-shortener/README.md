@@ -1,7 +1,7 @@
 # Part 1 — Link-shortener API
 
 A JSON REST API that shortens URLs and counts redirect hits. First project of
-the [learn-php curriculum](../docs/specs/part-1-link-shortener.md): small
+the [learn-php curriculum](../docs/specs/link-shortener.md): small
 enough to hold in your head, so every Symfony concept stays visible.
 
 **Stack:** PHP 8.3 (php-fpm) · Symfony 7.4 · Doctrine ORM + Migrations ·

@@ -17,7 +17,7 @@ A hands-on PHP learning repo. Each lesson is a small, working project — starti
 
 The curriculum has five parts — two warm-up projects, then one e-commerce order system that evolves from DDD monolith to event-driven services to a production deployment on a single Lightsail server. See [docs/curriculum.md](docs/curriculum.md) for the overview and [docs/specs/](docs/specs/) for the one-page spec of each part.
 
-Each part lives in its own directory (`part-1-link-shortener/`, ...), self-contained with its own README.
+Each part lives in its own directory (`link-shortener/`, ...), self-contained with its own README.
 
 ## Running the projects
 

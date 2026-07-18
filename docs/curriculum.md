@@ -4,11 +4,11 @@ Five parts. Parts 1–2 are standalone warm-ups; parts 3–5 are one system — 
 
 | Part | Project | Focus |
 |------|---------|-------|
-| 1 | [Link-shortener API](specs/part-1-link-shortener.md) | Symfony fundamentals, Doctrine/MySQL, REST, Docker, first tests |
-| 2 | [Team task tracker](specs/part-2-task-tracker.md) | Auth, roles, Redis, security hardening, Jenkins CI |
-| 3 | [Order system — DDD monolith](specs/part-3-order-system.md) | DDD, hexagonal architecture, CQRS-lite, domain events |
-| 4 | [Order system — event-driven services](specs/part-4-event-driven-services.md) | Microservices, async messaging, outbox, idempotency |
-| 5 | [Order system — ship it](specs/part-5-ship-it.md) | Ansible, Lightsail, Jenkins CD, zero-downtime deploys, backups |
+| 1 | [Link-shortener API](specs/link-shortener.md) | Symfony fundamentals, Doctrine/MySQL, REST, Docker, first tests |
+| 2 | [Team task tracker](specs/task-tracker.md) | Auth, roles, Redis, security hardening, Jenkins CI |
+| 3 | [Order system — DDD monolith](specs/order-system.md) | DDD, hexagonal architecture, CQRS-lite, domain events |
+| 4 | [Order system — event-driven services](specs/event-driven-services.md) | Microservices, async messaging, outbox, idempotency |
+| 5 | [Order system — ship it](specs/ship-it.md) | Ansible, Lightsail, Jenkins CD, zero-downtime deploys, backups |
 
 ## Process
 

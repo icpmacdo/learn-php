@@ -1,8 +1,8 @@
 # PRD — Part 2: Team task tracker
 
-Expands [the one-page spec](../specs/part-2-task-tracker.md). The spec is the source of truth for scope; this document nails down the contracts, data model, security design, and build order.
+Expands [the one-page spec](../specs/task-tracker.md). The spec is the source of truth for scope; this document nails down the contracts, data model, security design, and build order.
 
-**Project directory:** `part-2-task-tracker/` (self-contained: own `compose.yaml`, own `README.md`, own Jenkins compose under `jenkins/`).
+**Project directory:** `task-tracker/` (self-contained: own `compose.yaml`, own `README.md`, own Jenkins compose under `jenkins/`).
 
 **Stack:** PHP 8.3, Symfony (current stable, minimal skeleton), Doctrine ORM + Migrations, MySQL 8, Redis 7, Symfony Security (form login, access tokens, voters), symfony/rate-limiter, Twig, Codeception (Api + Unit), PHP-CS-Fixer, PHPStan, Jenkins (dockerized, JCasC). API at `http://localhost:8081`, Jenkins at `http://localhost:8082`. Part 1 keeps 8080 — its containers, files, and ports are untouched.
 
@@ -289,14 +289,14 @@ Project-local `compose.yaml`, name `task-tracker`, mirroring part 1's layout (en
 | `mysql` | mysql:8 | **unpublished** | named volume, healthcheck, init script creates `app_test` |
 | `redis` | redis:7-alpine | **unpublished** | no persistence config (cache + limiter data is disposable — say why) |
 
-**Repo gotcha (must-do):** Ian's global gitignore has an unanchored `.env` rule. `part-2-task-tracker/.gitignore` must contain `!/.env` and `!/.env.*` negations, verified with `git check-ignore` against every committed-intent env file.
+**Repo gotcha (must-do):** Ian's global gitignore has an unanchored `.env` rule. `task-tracker/.gitignore` must contain `!/.env` and `!/.env.*` negations, verified with `git check-ignore` against every committed-intent env file.
 
 ## 10. Jenkins — dockerized CI as a gate
 
-Separate compose project in `part-2-task-tracker/jenkins/` (`docker compose -f jenkins/compose.yaml up -d`), so app dev and CI lifecycles are independent. **Zero manual clicking:** everything is code.
+Separate compose project in `task-tracker/jenkins/` (`docker compose -f jenkins/compose.yaml up -d`), so app dev and CI lifecycles are independent. **Zero manual clicking:** everything is code.
 
 - **Image:** built from `jenkins/Dockerfile` — `jenkins/jenkins:lts-jdk17` + `jenkins-plugin-cli` installing a pinned `plugins.txt` (workflow-aggregator, git, configuration-as-code, job-dsl, docker-workflow).
-- **Config:** JCasC `casc.yaml` mounted read-only — creates the sole admin user (`admin`/`admin`, local-only toy), disables the setup wizard, and runs a Job DSL seed that defines one pipeline job, `task-tracker`, reading `part-2-task-tracker/Jenkinsfile` from SCM.
+- **Config:** JCasC `casc.yaml` mounted read-only — creates the sole admin user (`admin`/`admin`, local-only toy), disables the setup wizard, and runs a Job DSL seed that defines one pipeline job, `task-tracker`, reading `task-tracker/Jenkinsfile` from SCM.
 - **How the pipeline gets the code:** the repo root is bind-mounted read-only into the Jenkins container at `/repo`; the seed job copies the current `Jenkinsfile` from there and `load`s it on every build, and the pipeline rsyncs the **working tree** into an isolated CI workspace. (As designed this sketched a `git clone` from `file:///repo`, but a clone only ships *committed* work — the gate must judge the working tree before it is committed; see the README's CI section.) Port **8082:8080**.
 - **How stages run:** the Jenkins container mounts `/var/run/docker.sock` and has the docker CLI; the Jenkinsfile runs each stage inside the app's own php image (`docker-workflow`), so CI uses the identical runtime as dev — no toolchain drift, nothing on the "host".
 
@@ -319,7 +319,7 @@ Separate compose project in `part-2-task-tracker/jenkins/` (`docker compose -f j
 - `TaskListProviderInterface` with `DoctrineTaskListProvider` (query + count only);
 - `CachingTaskListProvider` — a **decorator** implementing the same interface, owning key/tag/TTL, wired via DI so the controller depends only on the interface.
 
-Principles exercised, by name: **SRP** (HTTP parsing, querying, and caching become three objects), **OCP/DIP** (caching added by decoration behind an abstraction, not by editing the query code; swap-out visible in `services.yaml`). Documented before/after — real diffs, the "why", and what the controller shrank to — in `part-2-task-tracker/docs/solid-refactor.md`.
+Principles exercised, by name: **SRP** (HTTP parsing, querying, and caching become three objects), **OCP/DIP** (caching added by decoration behind an abstraction, not by editing the query code; swap-out visible in `services.yaml`). Documented before/after — real diffs, the "why", and what the controller shrank to — in `task-tracker/docs/solid-refactor.md`.
 
 ## 12. Test plan (Codeception, inside the `php` container, `test` env, `app_test` DB, relaxed limiters)
 

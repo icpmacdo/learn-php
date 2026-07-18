@@ -1,8 +1,8 @@
 # PRD — Part 1: Link-shortener API
 
-Expands [the one-page spec](../specs/part-1-link-shortener.md). The spec is the source of truth for scope; this document nails down the contracts, data model, and build order.
+Expands [the one-page spec](../specs/link-shortener.md). The spec is the source of truth for scope; this document nails down the contracts, data model, and build order.
 
-**Project directory:** `part-1-link-shortener/` (self-contained: own `compose.yaml`, own `README.md`).
+**Project directory:** `link-shortener/` (self-contained: own `compose.yaml`, own `README.md`).
 
 **Stack:** PHP 8.3, Symfony (current stable, minimal skeleton), Doctrine ORM + Doctrine Migrations, MySQL 8 (container only, not published to the host), Symfony Validator, Codeception (API + Unit suites), nginx + php-fpm via Docker Compose. API served at `http://localhost:8080`.
 

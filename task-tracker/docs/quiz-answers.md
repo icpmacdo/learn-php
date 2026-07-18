@@ -1,7 +1,7 @@
 # Part 2 quiz — answers
 
 Questions are in [quiz.md](quiz.md). File paths are relative to
-`part-2-task-tracker/`.
+`task-tracker/`.
 
 ---
 

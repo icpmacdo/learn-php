@@ -4,7 +4,7 @@ This is a guided reading of the Part 1 codebase, not reference docs. Read it
 with the code open; every section names the exact file to look at. The order
 matters: first you follow one real request end to end so nothing stays magic,
 then you revisit the same files once per learning objective from
-[the spec](../../docs/specs/part-1-link-shortener.md).
+[the spec](../../docs/specs/link-shortener.md).
 
 One piece of context before anything else, because it shapes everything you're
 about to read: **PHP is share-nothing per request**. Unlike a Node or JVM

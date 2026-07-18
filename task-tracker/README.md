@@ -328,7 +328,7 @@ config + admin user (`jenkins/casc.yaml`, JCasC), and the job itself (a Job
 DSL seed in the same file). Zero setup clicks.
 
 ```bash
-docker compose -f jenkins/compose.yaml up -d --wait   # from part-2-task-tracker/
+docker compose -f jenkins/compose.yaml up -d --wait   # from task-tracker/
 open http://localhost:8082                            # login: admin / admin (local-only toy)
 ```
 

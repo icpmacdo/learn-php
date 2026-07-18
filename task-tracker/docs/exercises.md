@@ -22,7 +22,7 @@ The rules, same as the rest of part 2:
   change stayed consistent with the codebase's conventions (thin controllers,
   DTO + Validator, the single error shape, voters not inline ifs).
 
-Paths below are relative to `part-2-task-tracker/`.
+Paths below are relative to `task-tracker/`.
 
 ---
 

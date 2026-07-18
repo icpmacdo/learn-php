@@ -42,7 +42,7 @@ stage('Snapshot workspace') {
     sh "rsync -a --delete " +
         "--exclude '/vendor/' --exclude '/var/' --exclude '/.git' " +
         "--exclude '/tests/_output/' --exclude '/tests/Support/_generated/' " +
-        "/repo/part-2-task-tracker/ ${SRC}/"
+        "/repo/task-tracker/ ${SRC}/"
     // Build (cached no-op when unchanged) so task-tracker-php exists even on
     // a machine that never ran the dev stack.
     dir(SRC) {
