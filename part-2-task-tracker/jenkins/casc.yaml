@@ -1,0 +1,52 @@
+# Jenkins Configuration as Code -- the whole controller state, in one file.
+#
+# Read once at boot (CASC_JENKINS_CONFIG points here, baked into the image).
+# Admin access: admin / admin -- a local-only toy credential, matching the
+# PRD; this Jenkins is never exposed beyond localhost:8082.
+jenkins:
+  systemMessage: "task-tracker quality gate -- configured entirely by jenkins/casc.yaml (JCasC). The 'task-tracker' job runs the pipeline from part-2-task-tracker/Jenkinsfile."
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "http://localhost:8082/"
+
+# Job DSL seed, run by JCasC at boot: defines the one pipeline job as code.
+#
+# The job body is a fixed two-step bootstrap -- copy the CURRENT Jenkinsfile
+# out of the bind-mounted repo (/repo, read-only) into the workspace, then
+# `load` it. Loading at BUILD time (rather than snapshotting the script into
+# the job at boot) means editing part-2-task-tracker/Jenkinsfile on the host
+# changes the very next build, with no Jenkins restart and no commit.
+# (The PRD sketched a git clone from file:///repo; that only ships committed
+# work, and this part's rule is "nothing lands on main while red" -- the gate
+# must judge the working tree BEFORE it is committed. See README, CI section.)
+jobs:
+  - script: |
+      pipelineJob('task-tracker') {
+          description('''The part-2 quality gate: composer validate -> PHP-CS-Fixer -> PHPStan -> Codeception.
+      Pipeline definition: part-2-task-tracker/Jenkinsfile (loaded fresh from the mounted repo on every build).
+      Green = mergeable. Red = nothing lands on main until it is green again.''')
+          definition {
+              cps {
+                  script('''
+                      node {
+                          stage('Load Jenkinsfile') {
+                              sh 'cp /repo/part-2-task-tracker/Jenkinsfile Jenkinsfile.current.groovy'
+                          }
+                          load 'Jenkinsfile.current.groovy'
+                      }
+                  '''.stripIndent())
+                  sandbox(true)
+              }
+          }
+      }

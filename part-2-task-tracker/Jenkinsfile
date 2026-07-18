@@ -1,0 +1,85 @@
+/*
+ * task-tracker quality gate.
+ *
+ * Scripted pipeline, `load`ed fresh from the bind-mounted repo (/repo) by
+ * the seed job's bootstrap on EVERY build (jenkins/casc.yaml), so it always
+ * judges the current working tree -- edit, Build Now, verdict.
+ *
+ * Every stage runs inside the app's own php image (task-tracker-php) as a
+ * sibling container on the host daemon: CI's runtime is byte-identical to
+ * dev's, nothing is installed on the host or the Jenkins controller. The
+ * one path trick that makes this work: /private/tmp/task-tracker-ci is
+ * mounted into the Jenkins container at its own host path (see
+ * jenkins/compose.yaml), so paths under it mean the same thing to Jenkins,
+ * to `docker run -v`, and to compose bind mounts.
+ *
+ * Stages -- each red-fails the build, that is the point:
+ *   1. Snapshot     rsync working tree -> CI workspace (+ ensure php image)
+ *   2. Manifest     composer validate --strict, composer install
+ *   3. Code style   php-cs-fixer --dry-run --diff  (zero drift allowed)
+ *   4. Static       phpstan analyse (level 8, src + tests, no baseline)
+ *   5. Tests        codeception (Api + Unit) against an ISOLATED compose
+ *                   project (task-tracker-ci: own MySQL + Redis, no
+ *                   published ports), torn down win or lose.
+ */
+
+def CI_ROOT = '/private/tmp/task-tracker-ci'
+def SRC = "${CI_ROOT}/src"
+
+// One-off runs in the app image. --entrypoint '' skips the app entrypoint
+// (it would wait for a MySQL that these stages deliberately do not have).
+def PHP = "docker run --rm --entrypoint '' -v ${SRC}:/app -w /app -e COMPOSER_ALLOW_SUPERUSER=1 task-tracker-php"
+
+// The isolated test stack: separate project name, CI override file.
+def COMPOSE = 'docker compose -p task-tracker-ci -f compose.yaml -f compose.ci.yaml'
+
+stage('Snapshot workspace') {
+    // The WORKING TREE (not a git export): the gate judges what is on disk
+    // before it gets committed. vendor/ and var/ stay CI-local (vendor is
+    // also the composer cache between builds); --delete keeps the copy an
+    // exact mirror otherwise.
+    sh "mkdir -p ${SRC}"
+    sh "rsync -a --delete " +
+        "--exclude '/vendor/' --exclude '/var/' --exclude '/.git' " +
+        "--exclude '/tests/_output/' --exclude '/tests/Support/_generated/' " +
+        "/repo/part-2-task-tracker/ ${SRC}/"
+    // Build (cached no-op when unchanged) so task-tracker-php exists even on
+    // a machine that never ran the dev stack.
+    dir(SRC) {
+        sh "${COMPOSE} build php"
+    }
+}
+
+stage('composer validate + install') {
+    sh "${PHP} composer validate --strict"
+    sh "${PHP} composer install --no-interaction --no-progress"
+    // Regenerate Codeception's actor traits (excluded from the snapshot):
+    // PHPStan reflects ApiTester, which `use`s the generated trait.
+    sh "${PHP} vendor/bin/codecept build"
+}
+
+stage('PHP-CS-Fixer (dry run)') {
+    // --dry-run: CI never rewrites code, it only vetoes drift.
+    sh "${PHP} vendor/bin/php-cs-fixer fix --dry-run --diff"
+}
+
+stage('PHPStan (level 8)') {
+    sh "${PHP} vendor/bin/phpstan analyse --no-progress --memory-limit=1G"
+}
+
+stage('Codeception (Api + Unit)') {
+    dir(SRC) {
+        try {
+            sh "${COMPOSE} up -d --wait"
+            // Recompile the test container BEFORE codecept boots the kernel:
+            // Codeception's Symfony module initializes at module load, ahead
+            // of the suite bootstrap that reads .env -- a stale/absent test
+            // cache otherwise fails the first post-change run.
+            sh "${COMPOSE} exec -T php bin/console cache:warmup --env=test"
+            sh "${COMPOSE} exec -T php vendor/bin/codecept run"
+        } finally {
+            // Win or lose: no CI containers or volumes outlive the build.
+            sh "${COMPOSE} down -v --remove-orphans"
+        }
+    }
+}

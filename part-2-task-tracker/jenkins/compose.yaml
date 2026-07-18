@@ -1,0 +1,41 @@
+# Dockerized Jenkins -- a compose project of its own, so CI's lifecycle is
+# independent of the app stack's:
+#
+#   docker compose -f jenkins/compose.yaml up -d --wait   (from part-2-task-tracker/)
+#   open http://localhost:8082   (admin / admin)
+#
+# Ports: 8080 dev is part 1's, 8081 is the app, 8082 is Jenkins.
+name: task-tracker-jenkins
+
+services:
+  jenkins:
+    build: .
+    ports:
+      - "8082:8080"
+    volumes:
+      # Controller state (jobs, build history) survives restarts.
+      - jenkins-home:/var/jenkins_home
+      # The HOST's docker daemon: pipeline stages run as sibling containers
+      # of the app stack, using the app's own php image -- docker-outside-of-
+      # docker, nothing installed on the host.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # The repo, read-only: the seed job reads part-2-task-tracker/Jenkinsfile
+      # from here and the pipeline rsyncs the working tree from here. CI can
+      # only ever OBSERVE the repo, never write to it.
+      - ../..:/repo:ro
+      # The CI workspace, bind-mounted at the SAME absolute path inside the
+      # container as on the host. That identity is what makes docker-outside-
+      # of-docker work: when a pipeline `docker run -v` or a compose file
+      # names a path under /private/tmp/task-tracker-ci, the host daemon
+      # resolves it to the exact files Jenkins just wrote.
+      - /private/tmp/task-tracker-ci:/private/tmp/task-tracker-ci
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/login > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # Plugin initialization + JCasC + the seed job take a while on boot.
+      start_period: 90s
+
+volumes:
+  jenkins-home:

@@ -1,0 +1,15 @@
+# CI overrides -- layered on top of compose.yaml by the Jenkins pipeline:
+#
+#   docker compose -p task-tracker-ci -f compose.yaml -f compose.ci.yaml up -d --wait
+#
+# The separate project name (-p task-tracker-ci) gives the test run its own
+# containers, network and volumes (torn down with `down -v` afterwards), and
+# this file unpublishes the one published port -- CI never collides with the
+# dev stack on 8081 or part 1 on 8080, no matter when it runs.
+services:
+  nginx:
+    # !reset empties the merged list: no ports reach the host. The Api suite
+    # boots the Symfony kernel in-process (Codeception's Symfony module), so
+    # nothing in CI ever needed the HTTP edge -- nginx stays only because the
+    # php healthcheck/entrypoint contract is identical to dev this way.
+    ports: !reset []

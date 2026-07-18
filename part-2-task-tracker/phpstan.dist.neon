@@ -1,0 +1,20 @@
+# PHPStan — the static-analysis half of the quality gate (CI stage 3).
+#
+# Level 8 = strict nullability + no untyped calls on mixed. No baseline:
+# the codebase passes clean, so any new error is a real regression.
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    excludePaths:
+        # Codeception-generated actor actions (regenerated on every `codecept
+        # build`). "(?)" = optional: these dirs exist locally but are absent
+        # from CI's snapshot of the working tree.
+        - tests/Support/_generated (?)
+        - tests/_output (?)
+    tmpDir: var/phpstan
+    doctrine:
+        # Boot the kernel so phpstan-doctrine sees real ORM metadata
+        # (generated ids are "written by the ORM", DQL fields exist, ...).
+        objectManagerLoader: tests/object-manager.php
