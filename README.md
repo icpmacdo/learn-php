@@ -15,10 +15,10 @@ A hands-on PHP learning repo. Each lesson is a small, working project — starti
 
 ## Structure
 
-Lessons live in numbered directories (`lesson-01-...`, `lesson-02-...`), each self-contained with its own README explaining what it covers and how to run it.
+The curriculum has five parts — two warm-up projects, then one e-commerce order system that evolves from DDD monolith to event-driven services to a production deployment on a single Lightsail server. See [docs/curriculum.md](docs/curriculum.md) for the overview and [docs/specs/](docs/specs/) for the one-page spec of each part.
 
-**Lesson 1** (coming first): a Symfony PHP server — the foundation the rest of the curriculum builds on.
+Each part lives in its own directory (`part-1-link-shortener/`, ...), self-contained with its own README.
 
-## Running lessons
+## Running the projects
 
-Each lesson ships with a Docker setup so nothing needs to be installed globally. See the lesson's README for specifics.
+Every part ships with a Docker Compose setup so nothing needs to be installed globally. See each part's README for specifics.
