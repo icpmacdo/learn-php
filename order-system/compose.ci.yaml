@@ -1,0 +1,16 @@
+# CI overrides -- layered on top of compose.yaml by the Jenkins pipeline:
+#
+#   docker compose -p order-system-ci -f compose.yaml -f compose.ci.yaml up -d --wait
+#
+# The separate project name (-p order-system-ci) gives the test run its own
+# containers, network and volumes (torn down with `down -v` afterwards), and
+# this file unpublishes the one published port -- CI never collides with the
+# dev stack on 8083, Jenkins on 8084, or parts 1-2 on 8080-8082, no matter
+# when it runs.
+services:
+  nginx:
+    # !reset empties the merged list: no ports reach the host. Unlike part 2,
+    # nginx is NOT idle here -- the Acceptance suite runs inside the CI php
+    # container and talks to http://nginx over the CI project's own network;
+    # it just never needs a host port to do so.
+    ports: !reset []

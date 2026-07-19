@@ -1,0 +1,50 @@
+# Jenkins Configuration as Code -- the whole controller state, in one file.
+#
+# Read once at boot (CASC_JENKINS_CONFIG points here, baked into the image).
+# Admin access: admin / admin -- a local-only toy credential, matching the
+# PRD; this Jenkins is never exposed beyond localhost:8084.
+jenkins:
+  systemMessage: "order-system quality gate -- configured entirely by jenkins/casc.yaml (JCasC). The 'order-system' job runs the pipeline from order-system/Jenkinsfile; stage 5 (deptrac) is the architecture gate."
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "http://localhost:8084/"
+
+# Job DSL seed, run by JCasC at boot: defines the one pipeline job as code.
+#
+# The job body is a fixed two-step bootstrap -- copy the CURRENT Jenkinsfile
+# out of the bind-mounted repo (/repo, read-only) into the workspace, then
+# `load` it. Loading at BUILD time (rather than snapshotting the script into
+# the job at boot) means editing order-system/Jenkinsfile on the host
+# changes the very next build, with no Jenkins restart and no commit --
+# the gate judges the working tree BEFORE it lands on main.
+jobs:
+  - script: |
+      pipelineJob('order-system') {
+          description('''The part-3 quality gate: composer validate -> PHP-CS-Fixer -> PHPStan -> DEPTRAC (the architecture gate) -> Codeception (Unit + Integration + Acceptance).
+      Pipeline definition: order-system/Jenkinsfile (loaded fresh from the mounted repo on every build).
+      Deptrac red = a Domain layer imported framework code or a context reached across a boundary -- the spec's done-when, mechanically enforced.''')
+          definition {
+              cps {
+                  script('''
+                      node {
+                          stage('Load Jenkinsfile') {
+                              sh 'cp /repo/order-system/Jenkinsfile Jenkinsfile.current.groovy'
+                          }
+                          load 'Jenkinsfile.current.groovy'
+                      }
+                  '''.stripIndent())
+                  sandbox(true)
+              }
+          }
+      }

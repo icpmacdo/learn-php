@@ -1,0 +1,42 @@
+# Dockerized Jenkins -- a compose project of its own, so CI's lifecycle is
+# independent of the app stack's:
+#
+#   docker compose -f jenkins/compose.yaml up -d --wait   (from order-system/)
+#   open http://localhost:8084   (admin / admin)
+#
+# Ports: 8080-8082 belong to parts 1-2, 8083 is this part's API, 8084 is
+# this Jenkins.
+name: order-system-jenkins
+
+services:
+  jenkins:
+    build: .
+    ports:
+      - "8084:8080"
+    volumes:
+      # Controller state (jobs, build history) survives restarts.
+      - jenkins-home:/var/jenkins_home
+      # The HOST's docker daemon: pipeline stages run as sibling containers
+      # of the app stack, using the app's own php image -- docker-outside-of-
+      # docker, nothing installed on the host.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # The repo, read-only: the seed job reads order-system/Jenkinsfile
+      # from here and the pipeline rsyncs the working tree from here. CI can
+      # only ever OBSERVE the repo, never write to it.
+      - ../..:/repo:ro
+      # The CI workspace, bind-mounted at the SAME absolute path inside the
+      # container as on the host. That identity is what makes docker-outside-
+      # of-docker work: when a pipeline `docker run -v` or a compose file
+      # names a path under /private/tmp/order-system-ci, the host daemon
+      # resolves it to the exact files Jenkins just wrote.
+      - /private/tmp/order-system-ci:/private/tmp/order-system-ci
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/login > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # Plugin initialization + JCasC + the seed job take a while on boot.
+      start_period: 90s
+
+volumes:
+  jenkins-home:

@@ -1,0 +1,34 @@
+# PHPStan — the static-analysis half of the quality gate (CI stage 3).
+#
+# Level 8 = strict nullability + no untyped calls on mixed. No baseline:
+# the codebase passes clean, so any new error is a real regression.
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    excludePaths:
+        # Codeception-generated actor actions (regenerated on every `codecept
+        # build`). "(?)" = optional: these dirs exist locally but are absent
+        # from CI's snapshot of the working tree.
+        - tests/Support/_generated (?)
+        - tests/_output (?)
+    tmpDir: var/phpstan
+    ignoreErrors:
+        # The Order/Reservation aggregates type their child collections as
+        # iterable<...> instead of Doctrine's Collection interface — on
+        # purpose: the deptrac law forbids Domain classes from importing ANY
+        # vendor type, Collection included. Doctrine handles it fine (plain
+        # arrays are wrapped on persist, PersistentCollection satisfies
+        # iterable on load); this silences only phpstan-doctrine's "type the
+        # property as Collection" advice, not a real defect. Scoped to the
+        # two aggregate roots so any new mismatch elsewhere still fails.
+        -
+            identifier: doctrine.associationType
+            paths:
+                - src/Ordering/Domain/Order.php
+                - src/Inventory/Domain/Reservation.php
+    doctrine:
+        # Boot the kernel so phpstan-doctrine sees real ORM metadata (XML
+        # mappings, custom types, the Money embeddable).
+        objectManagerLoader: tests/object-manager.php

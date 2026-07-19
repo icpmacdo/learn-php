@@ -1,0 +1,8 @@
+# Resolved (with dependencies) by jenkins-plugin-cli at image build time.
+# The pinned SET is this file; versions ride the LTS update center so the
+# image always builds against a compatible line-up.
+configuration-as-code
+workflow-aggregator
+git
+job-dsl
+docker-workflow
