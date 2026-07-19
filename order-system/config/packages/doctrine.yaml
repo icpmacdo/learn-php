@@ -1,0 +1,82 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        profiling_collect_backtrace: '%kernel.debug%'
+        use_savepoints: true
+        # Custom DBAL types: how value objects cross the object/relational
+        # boundary without the domain ever seeing Doctrine. Registered here
+        # (Infrastructure config), used by the XML mappings below.
+        types:
+            sku: App\Shared\Infrastructure\Doctrine\SkuType
+            quantity: App\Shared\Infrastructure\Doctrine\QuantityType
+            customer_id: App\Shared\Infrastructure\Doctrine\CustomerIdType
+            # Context-owned id types live in their context's Infrastructure
+            # (Shared Infrastructure may not import Ordering/Inventory code).
+            order_id: App\Ordering\Infrastructure\Doctrine\OrderIdType
+            reservation_id: App\Inventory\Infrastructure\Doctrine\ReservationIdType
+        # doctrine:migrations:diff must ignore tables that are deliberately
+        # NOT ORM-mapped (the DBAL-managed cart, the fake gateway's private
+        # attempt ledger, stage 3's read models) -- without this filter a
+        # diff would try to DROP them.
+        schema_filter: '~^(?!ordering_cart|ordering_payment_attempt|notification_log|read_)~'
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        # No auto_mapping and no attribute mappings: entities are pure PHP.
+        # Each context maps its own aggregates via XML files under
+        # config/doctrine/<Context>/ -- mapping is an Infrastructure concern,
+        # so it lives in config, not on the domain classes (the deptrac rule
+        # "Domain imports no vendor code" makes attributes impossible anyway).
+        auto_mapping: false
+        mappings:
+            SharedDomain:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/config/doctrine/Shared'
+                prefix: 'App\Shared\Domain'
+            CatalogDomain:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/config/doctrine/Catalog'
+                prefix: 'App\Catalog\Domain'
+            InventoryDomain:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/config/doctrine/Inventory'
+                prefix: 'App\Inventory\Domain'
+            OrderingDomain:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/config/doctrine/Ordering'
+                prefix: 'App\Ordering\Domain'
+        controller_resolver:
+            auto_mapping: false
+
+when@test:
+    doctrine:
+        dbal:
+            # Same MySQL server, separate `app_test` database.
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            auto_generate_proxy_classes: false
+            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system

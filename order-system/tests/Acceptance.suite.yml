@@ -1,0 +1,17 @@
+# Acceptance suite: real HTTP against nginx, exactly what a client sees --
+# no kernel booted in the test process, no backdoors. Runs from inside the
+# php container, so `http://nginx` resolves on the compose network.
+#
+# These tests hit the DEV database (they go through nginx like any client),
+# so every scenario generates its own random SKUs: repeatable without
+# cleanup, and dev data is never assumed absent.
+actor: AcceptanceTester
+modules:
+    enabled:
+        - REST:
+            url: http://nginx
+            depends: PhpBrowser
+            part: Json
+        - Asserts
+step_decorators:
+    - Codeception\Step\AsJson

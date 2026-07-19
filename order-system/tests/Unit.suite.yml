@@ -1,0 +1,8 @@
+# Unit suite: pure domain logic, no kernel, no database, no container.
+# The pyramid's base and where DDD pays off: Money arithmetic, Sku/Quantity
+# validation tables, aggregate invariants (P1-P3, S1-S4) and event recording
+# all run as plain PHP with in-memory objects.
+actor: UnitTester
+modules:
+    enabled:
+        - Asserts

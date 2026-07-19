@@ -1,0 +1,6 @@
+# Controllers live inside each context's Infrastructure/Http layer -- routing
+# scans all of src/ for #[Route] attributes (only Infrastructure classes have
+# them; a Route attribute anywhere else would be a deptrac violation).
+controllers:
+    resource: ../src/
+    type: attribute

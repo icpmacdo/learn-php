@@ -1,0 +1,161 @@
+# The architecture law (PRD §6) — this file is the part's spine.
+#
+# Layers are collected per context and per hexagonal ring; the ruleset below
+# is an ALLOWLIST: any dependency not explicitly listed is a violation and
+# red-fails CI stage 5. What that forbids, concretely:
+#
+#   - any Domain or Application class importing vendor code (one
+#     `use Doctrine\...` in an entity goes red — hence XML mappings),
+#   - one context touching another's Domain/Application internals
+#     (integration is events + the one Catalog PublicApi call),
+#   - anything but Ordering's Infrastructure calling Catalog's PublicApi.
+#
+# src/Kernel.php is excluded: it is the single framework touchpoint at the
+# root and belongs to no layer.
+deptrac:
+  paths:
+    - src
+  exclude_files:
+    - '#src/Kernel\.php#'
+
+  layers:
+    - name: Vendor
+      collectors:
+        - type: classNameRegex
+          value: '/^(Symfony|Doctrine|Psr|Twig|Monolog)\\/'
+
+    # --- shared kernel --------------------------------------------------
+    - name: SharedDomain
+      collectors:
+        - type: directory
+          value: src/Shared/Domain/.*
+    - name: SharedInfrastructure
+      collectors:
+        - type: directory
+          value: src/Shared/Infrastructure/.*
+
+    # --- Catalog --------------------------------------------------------
+    - name: CatalogEvents
+      collectors:
+        - type: directory
+          value: src/Catalog/Domain/Event/.*
+    - name: CatalogDomain
+      collectors:
+        - type: bool
+          must:
+            - type: directory
+              value: src/Catalog/Domain/.*
+          must_not:
+            - type: directory
+              value: src/Catalog/Domain/Event/.*
+    - name: CatalogPublicApi
+      collectors:
+        - type: directory
+          value: src/Catalog/Application/PublicApi/.*
+    - name: CatalogApplication
+      collectors:
+        - type: bool
+          must:
+            - type: directory
+              value: src/Catalog/Application/.*
+          must_not:
+            - type: directory
+              value: src/Catalog/Application/PublicApi/.*
+    - name: CatalogInfrastructure
+      collectors:
+        - type: directory
+          value: src/Catalog/Infrastructure/.*
+
+    # --- Ordering -------------------------------------------------------
+    - name: OrderingEvents
+      collectors:
+        - type: directory
+          value: src/Ordering/Domain/Event/.*
+    - name: OrderingDomain
+      collectors:
+        - type: bool
+          must:
+            - type: directory
+              value: src/Ordering/Domain/.*
+          must_not:
+            - type: directory
+              value: src/Ordering/Domain/Event/.*
+    - name: OrderingApplication
+      collectors:
+        - type: directory
+          value: src/Ordering/Application/.*
+    - name: OrderingInfrastructure
+      collectors:
+        - type: directory
+          value: src/Ordering/Infrastructure/.*
+
+    # --- Inventory ------------------------------------------------------
+    - name: InventoryEvents
+      collectors:
+        - type: directory
+          value: src/Inventory/Domain/Event/.*
+    - name: InventoryDomain
+      collectors:
+        - type: bool
+          must:
+            - type: directory
+              value: src/Inventory/Domain/.*
+          must_not:
+            - type: directory
+              value: src/Inventory/Domain/Event/.*
+    - name: InventoryApplication
+      collectors:
+        - type: directory
+          value: src/Inventory/Application/.*
+    - name: InventoryInfrastructure
+      collectors:
+        - type: directory
+          value: src/Inventory/Infrastructure/.*
+
+    # --- Notification ---------------------------------------------------
+    - name: NotificationDomain
+      collectors:
+        - type: directory
+          value: src/Notification/Domain/.*
+    - name: NotificationApplication
+      collectors:
+        - type: directory
+          value: src/Notification/Application/.*
+    - name: NotificationInfrastructure
+      collectors:
+        - type: directory
+          value: src/Notification/Infrastructure/.*
+
+  ruleset:
+    # The shared kernel depends on NOTHING — zero framework, zero contexts.
+    SharedDomain: ~
+
+    # Events are the published language: plain classes over shared VOs.
+    CatalogEvents: [SharedDomain]
+    OrderingEvents: [SharedDomain]
+    InventoryEvents: [SharedDomain]
+
+    # Domain: shared kernel + own events. NO Vendor — the spec's done-when.
+    CatalogDomain: [SharedDomain, CatalogEvents]
+    OrderingDomain: [SharedDomain, OrderingEvents]
+    InventoryDomain: [SharedDomain, InventoryEvents]
+    NotificationDomain: [SharedDomain]
+
+    # Application: own domain + own events, plus OTHER contexts' events only
+    # (the consumer table in PRD §5). Still no Vendor: handlers are plain PHP.
+    CatalogApplication: [CatalogDomain, CatalogEvents, SharedDomain, InventoryEvents]
+    CatalogPublicApi: [CatalogDomain, CatalogEvents, SharedDomain]
+    OrderingApplication: [OrderingDomain, OrderingEvents, SharedDomain]
+    InventoryApplication: [InventoryDomain, InventoryEvents, SharedDomain, OrderingEvents]
+    NotificationApplication: [NotificationDomain, SharedDomain, OrderingEvents]
+
+    # Infrastructure: the only rings allowed to see Vendor. Ordering's infra
+    # may additionally call Catalog's PublicApi — the ACL adapter's one legal
+    # cross-context call.
+    CatalogInfrastructure: [CatalogApplication, CatalogPublicApi, CatalogDomain, CatalogEvents, SharedDomain, SharedInfrastructure, Vendor]
+    OrderingInfrastructure: [OrderingApplication, OrderingDomain, OrderingEvents, SharedDomain, SharedInfrastructure, Vendor, CatalogPublicApi]
+    InventoryInfrastructure: [InventoryApplication, InventoryDomain, InventoryEvents, SharedDomain, SharedInfrastructure, Vendor]
+    NotificationInfrastructure: [NotificationApplication, NotificationDomain, SharedDomain, SharedInfrastructure, Vendor]
+
+    # The dispatcher adapter and HTTP plumbing may touch events + Vendor.
+    SharedInfrastructure: [SharedDomain, CatalogEvents, OrderingEvents, InventoryEvents, Vendor]

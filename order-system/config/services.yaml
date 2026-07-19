@@ -1,0 +1,91 @@
+# Service wiring. Two things matter here:
+#
+# 1. Domain layers are EXCLUDED from service registration: value objects,
+#    aggregates and events are constructed by code (or hydrated by Doctrine),
+#    never by the container. Only Application and Infrastructure classes are
+#    services.
+# 2. Ports (interfaces in Domain) are bound to their adapters
+#    (Infrastructure) explicitly below. This block is the hexagon's wiring
+#    diagram: swapping an adapter is a one-line edit here, no class changes.
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/*/Domain/'
+
+    # --- port -> adapter bindings (the hexagon's edges) -------------------
+    App\Shared\Domain\Clock: '@App\Shared\Infrastructure\SystemClock'
+    App\Shared\Domain\DomainEventDispatcher: '@App\Shared\Infrastructure\SymfonyDomainEventDispatcher'
+    App\Shared\Domain\TransactionBoundary: '@App\Shared\Infrastructure\Doctrine\DoctrineTransactionBoundary'
+    App\Catalog\Domain\ProductRepository: '@App\Catalog\Infrastructure\Persistence\DoctrineProductRepository'
+    App\Inventory\Domain\StockItemRepository: '@App\Inventory\Infrastructure\Persistence\DoctrineStockItemRepository'
+    App\Inventory\Domain\ReservationRepository: '@App\Inventory\Infrastructure\Persistence\DoctrineReservationRepository'
+    App\Ordering\Domain\CartRepository: '@App\Ordering\Infrastructure\Persistence\DbalCartRepository'
+    App\Ordering\Domain\OrderRepository: '@App\Ordering\Infrastructure\Persistence\DoctrineOrderRepository'
+    App\Ordering\Domain\Port\ProductCatalog: '@App\Ordering\Infrastructure\Acl\CatalogProductCatalog'
+    # THE hexagonal swap point: replacing the fake with a real PSP adapter is
+    # this one line plus a new class in Ordering/Infrastructure/Payment.
+    App\Ordering\Domain\Port\PaymentGateway: '@App\Ordering\Infrastructure\Payment\FakePaymentGateway'
+    # Notification's mailer: logged, never sent. A real SMTP adapter would be
+    # another one-line swap here.
+    App\Notification\Domain\Mailer: '@App\Notification\Infrastructure\LoggingMailer'
+    # Read-model write ports (CQRS-lite): projectors are Application classes,
+    # their DBAL upserts live behind these bindings.
+    App\Catalog\Application\Projection\ProductListReadModel: '@App\Catalog\Infrastructure\Persistence\DbalProductListReadModel'
+    App\Ordering\Application\Projection\OrderSummaryReadModel: '@App\Ordering\Infrastructure\Persistence\DbalOrderSummaryReadModel'
+
+    # --- the event seam (PRD §5) ------------------------------------------
+    # Application subscribers are plain PHP (no framework attributes allowed
+    # in that layer), so their wiring to the dispatcher lives HERE, in
+    # config. Same dispatcher the SymfonyDomainEventDispatcher adapter wraps;
+    # everything runs synchronously inside the command's transaction --
+    # which is exactly why InsufficientStock can roll a checkout back.
+    App\Inventory\Application\Subscriber\ReserveStockOnOrderPlaced:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderPlaced }
+    App\Inventory\Application\Subscriber\ReleaseStockOnOrderCancelled:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderCancelled }
+    App\Inventory\Application\Subscriber\CommitStockOnOrderShipped:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderShipped }
+
+    # Notification: one subscriber per order event, composing the "email"
+    # that the LoggingMailer records instead of sending.
+    App\Notification\Application\Subscriber\SendOrderConfirmation:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderPlaced }
+    App\Notification\Application\Subscriber\SendPaymentReceipt:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderPaid }
+    App\Notification\Application\Subscriber\SendShipmentNotice:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderShipped }
+
+    # CQRS-lite projectors (PRD §7). read_product_list is fed by TWO
+    # contexts' events — Catalog owns the merchandising columns, Inventory
+    # the availability column (every stock event carries `available`, so the
+    # projector never looks anything up). read_order_summary follows the four
+    # order events. Both run inside the emitting command's transaction.
+    App\Catalog\Application\Projection\ProductListProjector:
+        tags:
+            - { name: kernel.event_listener, event: App\Catalog\Domain\Event\ProductAdded, method: onProductAdded }
+            - { name: kernel.event_listener, event: App\Catalog\Domain\Event\ProductRenamed, method: onProductRenamed }
+            - { name: kernel.event_listener, event: App\Catalog\Domain\Event\ProductPriceChanged, method: onProductPriceChanged }
+            - { name: kernel.event_listener, event: App\Catalog\Domain\Event\ProductDeactivated, method: onProductDeactivated }
+            - { name: kernel.event_listener, event: App\Catalog\Domain\Event\ProductReactivated, method: onProductReactivated }
+            - { name: kernel.event_listener, event: App\Inventory\Domain\Event\StockReceived, method: onStockChanged }
+            - { name: kernel.event_listener, event: App\Inventory\Domain\Event\StockReserved, method: onStockChanged }
+            - { name: kernel.event_listener, event: App\Inventory\Domain\Event\StockReleased, method: onStockChanged }
+            - { name: kernel.event_listener, event: App\Inventory\Domain\Event\StockCommitted, method: onStockChanged }
+    App\Ordering\Application\Projection\OrderSummaryProjector:
+        tags:
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderPlaced, method: onOrderPlaced }
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderPaid, method: onOrderPaid }
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderShipped, method: onOrderShipped }
+            - { name: kernel.event_listener, event: App\Ordering\Domain\Event\OrderCancelled, method: onOrderCancelled }

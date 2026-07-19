@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Reservation aggregate <-> inventory_reservation. order_id is a plain
+    VARCHAR value with a UNIQUE index - that index IS invariant R1 ("exactly
+    one reservation per order"), and it is deliberately NOT a foreign key to
+    ordering_order: the order id crosses the context boundary as a value,
+    never as a schema relationship (the part-4 fault line).
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Inventory\Domain\Reservation" table="inventory_reservation">
+        <unique-constraints>
+            <unique-constraint name="uniq_inventory_reservation_order" columns="order_id"/>
+        </unique-constraints>
+        <id name="id" type="reservation_id" column="id" length="36"/>
+        <field name="orderId" type="string" column="order_id" length="36"/>
+        <field name="status" type="string" length="10" enum-type="App\Inventory\Domain\ReservationStatus"/>
+        <field name="createdAt" type="datetime_immutable"/>
+        <field name="updatedAt" type="datetime_immutable"/>
+        <one-to-many field="lines" target-entity="App\Inventory\Domain\ReservationLine" mapped-by="reservation" fetch="EAGER">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
+        </one-to-many>
+    </entity>
+</doctrine-mapping>

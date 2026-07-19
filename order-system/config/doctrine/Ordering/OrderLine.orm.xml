@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    OrderLine child entity <-> ordering_order_line. The snapshot truth at the
+    moment of sale: sku + name + unit price frozen forever (a later catalog
+    change never rewrites these rows). The surrogate auto-increment id exists
+    only because rows need identity; it never leaves the aggregate.
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Ordering\Domain\OrderLine" table="ordering_order_line">
+        <id name="id" type="integer" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+        <field name="sku" type="sku" column="sku" length="32"/>
+        <field name="name" type="string" length="255"/>
+        <embedded name="unitPrice" class="App\Shared\Domain\Money" column-prefix="unit_price_"/>
+        <field name="quantity" type="quantity" column="quantity"/>
+        <many-to-one field="order" target-entity="App\Ordering\Domain\Order" inversed-by="lines">
+            <join-column name="order_id" referenced-column-name="id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Product aggregate <-> catalog_product table. XML instead of attributes so
+    the entity stays framework-free (the deptrac Domain rule). The SKU is the
+    primary key via the custom "sku" DBAL type; the price is the Money
+    embeddable with the "price_" column prefix.
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Catalog\Domain\Product" table="catalog_product">
+        <id name="sku" type="sku" column="sku" length="32"/>
+        <field name="name" type="string" length="255"/>
+        <field name="description" type="text" nullable="true"/>
+        <embedded name="price" class="App\Shared\Domain\Money" column-prefix="price_"/>
+        <field name="active" type="boolean"/>
+        <field name="createdAt" type="datetime_immutable"/>
+        <field name="updatedAt" type="datetime_immutable"/>
+    </entity>
+</doctrine-mapping>

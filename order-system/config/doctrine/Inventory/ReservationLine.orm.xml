@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    ReservationLine child entity <-> inventory_reservation_line: one held
+    SKU + quantity. Warehouse truth only - no price, no name.
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Inventory\Domain\ReservationLine" table="inventory_reservation_line">
+        <id name="id" type="integer" column="id">
+            <generator strategy="IDENTITY"/>
+        </id>
+        <field name="sku" type="sku" column="sku" length="32"/>
+        <field name="quantity" type="quantity" column="quantity"/>
+        <many-to-one field="reservation" target-entity="App\Inventory\Domain\Reservation" inversed-by="lines">
+            <join-column name="reservation_id" referenced-column-name="id" nullable="false" on-delete="CASCADE"/>
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

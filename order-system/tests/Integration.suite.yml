@@ -1,0 +1,17 @@
+# Integration suite: the Symfony kernel in the `test` env + real MySQL
+# (app_test database). This is where the Doctrine adapters prove that the
+# "pure entities via XML mappings" move actually round-trips: custom types,
+# the Money embeddable, unique indexes.
+#
+# The Doctrine module (cleanup: true) wraps every test in a transaction that
+# is rolled back afterwards, so tests are isolated and repeatable.
+actor: IntegrationTester
+modules:
+    enabled:
+        - Symfony:
+            app_path: 'src'
+            environment: 'test'
+        - Doctrine:
+            depends: Symfony
+            cleanup: true
+        - Asserts

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    StockItem aggregate <-> inventory_stock_item table. Same SKU value as
+    catalog_product.sku, but NO foreign key between them: the contexts share
+    the value, never the schema - that is the part-4 fault line drawn now.
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Inventory\Domain\StockItem" table="inventory_stock_item">
+        <id name="sku" type="sku" column="sku" length="32"/>
+        <field name="onHand" type="integer"/>
+        <field name="reserved" type="integer"/>
+        <field name="createdAt" type="datetime_immutable"/>
+        <field name="updatedAt" type="datetime_immutable"/>
+    </entity>
+</doctrine-mapping>

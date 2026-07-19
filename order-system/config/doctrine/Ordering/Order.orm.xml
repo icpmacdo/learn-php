@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Order aggregate <-> ordering_order. The status column stores the pure PHP
+    OrderStatus enum via enum-type; the total is deliberately NOT a column
+    (invariant O2: computed from the lines, never stored). Lines are a
+    cascade-persisted one-to-many; the domain holds them as a plain array
+    (typed iterable) so the entity never imports a vendor Collection type -
+    Doctrine wraps it on persist and hydrates a PersistentCollection on load.
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="App\Ordering\Domain\Order" table="ordering_order">
+        <indexes>
+            <index name="idx_ordering_order_customer_placed" columns="customer_id,placed_at"/>
+        </indexes>
+        <id name="id" type="order_id" column="id" length="36"/>
+        <field name="customerId" type="customer_id" column="customer_id" length="64"/>
+        <field name="status" type="string" length="10" enum-type="App\Ordering\Domain\OrderStatus"/>
+        <field name="currency" type="string" length="3"/>
+        <field name="placedAt" type="datetime_immutable"/>
+        <field name="paidAt" type="datetime_immutable" nullable="true"/>
+        <field name="shippedAt" type="datetime_immutable" nullable="true"/>
+        <field name="cancelledAt" type="datetime_immutable" nullable="true"/>
+        <field name="transactionId" type="string" length="64" nullable="true"/>
+        <one-to-many field="lines" target-entity="App\Ordering\Domain\OrderLine" mapped-by="order" fetch="EAGER">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
+        </one-to-many>
+    </entity>
+</doctrine-mapping>

@@ -1,0 +1,9 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    # Pure JSON API: no sessions, no cookies, no state between requests.
+    session: false
+
+when@test:
+    framework:
+        test: true

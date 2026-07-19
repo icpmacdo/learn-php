@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Money as a Doctrine EMBEDDABLE: two columns folded into one value object.
+    The mapping lives here (Infrastructure config), not on the class - Money
+    itself has zero Doctrine knowledge. Embedding entities choose a column
+    prefix, e.g. Product uses "price_" -> price_minor + price_currency.
+-->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                                      https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <embeddable name="App\Shared\Domain\Money">
+        <field name="amountMinor" type="integer" column="minor"/>
+        <field name="currency" type="string" length="3" column="currency"/>
+    </embeddable>
+</doctrine-mapping>
